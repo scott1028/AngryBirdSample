@@ -17,6 +17,10 @@ public class ball : MonoBehaviour {
     public bool canAddForce = false;
     public bool denyAllowMouseControl = false;
     public bool canPlayAudio = true;
+    float ballDistanceFromHisOriginPosition;
+    Vector3 lineRenderOriginPosition = new Vector3(-15.56f, 1f, -8.57f);
+    Vector3 lineRenderReturnOriginChangingPosition;
+    Vector3 lineRenderMovePositon;
     Vector3 lastPostition;
 
 	// Use this for initialization
@@ -35,12 +39,11 @@ public class ball : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
+
+        // 計算球體與自己圓點的座標
+        ballDistanceFromHisOriginPosition = Vector3.Distance(this.gameObject.transform.position,this.originPos);
+
         bool mouseDown = Input.GetMouseButton(0);
-
-        // 計算上的球體座標與本次的座標位移差值
-        //float substractLastAndThisPostion = Mathf.Abs((this.gameObject.transform.position - this.lastPostition).x) + Mathf.Abs((this.gameObject.transform.position - this.lastPostition).y);
-
-        //Debug.Log(substractLastAndThisPostion);
 
         // 當滑鼠點擊到球體的時候
         if (mouseDown && letBallMoveWithMouse == false && denyAllowMouseControl==false)
@@ -91,21 +94,34 @@ public class ball : MonoBehaviour {
             denyAllowMouseControl = true;
         }
 
-        // 計算橡皮筋位置需要的增減量
-        Vector3 lineRendererCenterPositionValue = new Vector3(-15.8f, 1f, -8.56f);
-        Vector3 lrpvc = lineRendererCenterPositionValue - (this.originPos - this.transform.position);
-        float len = Vector3.Distance(lrpvc, originPos);
-
-        //橡皮筋的恢復臨界值, 球體將橡皮筋拉超逾 4 時
-        if (len >= 4 && this.transform.position.x >= this.originPos.x + 4)
+        
+        // 橡皮筋的恢復臨界值Flag開啟, 球體將橡皮筋拉超逾 4 時
+        if (ballDistanceFromHisOriginPosition >= 4 && this.transform.position.x >= this.originPos.x + 4 && rubberLineReturnOrigin==false)
         {
             rubberLineReturnOrigin = true;
-            lrpvc = Vector3.Lerp(lrpvc, lineRendererCenterPositionValue, 5 * Time.deltaTime);
-            GameObject.Find("rubberBand").GetComponent<LineRenderer>().SetPosition(1, lrpvc);
+            // 將恢復座標起算點帶入
+            lineRenderReturnOriginChangingPosition = this.gameObject.transform.position;
         }
         else if (rubberLineReturnOrigin == false)
         {
-            
+            // 計算橡皮筋位置需要的增減量
+            lineRenderMovePositon = lineRenderOriginPosition - (this.originPos - this.transform.position);
+            float len = Vector3.Distance(lineRenderMovePositon, originPos);
+            GameObject.Find("rubberBand").GetComponent<LineRenderer>().SetPosition(1, lineRenderMovePositon);
+        }
+        else if (rubberLineReturnOrigin == true) {
+            // Rubber 開始趨近原點
+            lineRenderReturnOriginChangingPosition = Vector3.Lerp(lineRenderReturnOriginChangingPosition, this.lineRenderOriginPosition, 10 * Time.deltaTime);
+            GameObject.Find("rubberBand").GetComponent<LineRenderer>().SetPosition(1, lineRenderReturnOriginChangingPosition);
+
+            if (Vector3.Distance(lineRenderReturnOriginChangingPosition, this.lineRenderOriginPosition) < 0.01f)
+            {
+                lineRenderReturnOriginChangingPosition = this.lineRenderOriginPosition;
+                // rubberLineReturnOrigin = false; // 必須在當前的物件消失後才開啟Flag
+            }
+            else {
+                // Debug.Log(Vector3.Distance(lineRenderReturnOriginChangingPosition, this.lineRenderOriginPosition));
+            };
         }
 
         // 當物體又撞過地板或是物件的時候才會觸發向量過低時就停止物件的方法
@@ -128,11 +144,6 @@ public class ball : MonoBehaviour {
 
         // 當球在飛行的時候
         if (theBallisFlying) {
-            //if (Camera.mainCamera.camera.orthographicSize <= 11f) Camera.mainCamera.camera.orthographicSize += 0.01f;
-            //Vector3 pp=Camera.mainCamera.camera.transform.position;
-            //Vector3 tt=this.transform.position;
-            //pp=Vector3.Lerp(pp, tt,5f);
-
             Camera.mainCamera.BroadcastMessage("movingCamera", this.gameObject);
         }
 
@@ -145,7 +156,7 @@ public class ball : MonoBehaviour {
             this.gameObject.GetComponent<AudioSource>().Play();
         }
 
-        // 事情全部握完之後紀錄球體座標
+        // 事情全部做完之後紀錄球體座標
         lastPostition = this.gameObject.transform.position;
 	}
 
@@ -184,6 +195,7 @@ public class ball : MonoBehaviour {
     }
 
     void OnDestroy() {
+        rubberLineReturnOrigin = false;     // 告訴橡皮筋可以重新起算了
         Camera.mainCamera.gameObject.BroadcastMessage("prepareCreateBall", 0.5f);
     }
 
