@@ -25,10 +25,18 @@ public class enemy : MonoBehaviour {
     {
         if (collision.collider.gameObject.tag == "ball" || collision.collider.gameObject.tag == "enemy" && GameObject.Find("ball") && GameObject.Find("ball").GetComponent<ball>().ifBallAlreadyShot == true)
         {
-            this.health -= 5;
-            // Debug.Log(this.health);
+            // 不直接死亡採用扣血
+            //this.health -= 5;
+            //Debug.Log(this.health);
+            //this.gameObject.GetComponent<AudioSource>().Play();
 
-            this.gameObject.GetComponent<AudioSource>().Play();
+            // 被球體碰到就直接死亡，球體並不會反彈，可見物體摧毀後 Collider 也不會運算
+            Destroy(this.gameObject);
+            isDestroying = true;
+        }
+        else
+        { 
+            // 其他物體
         }
     }
 
