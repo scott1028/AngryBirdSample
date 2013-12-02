@@ -1,8 +1,16 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class ball : MonoBehaviour {
+// 擴充 Vector3 的 Instance 方法
+public static class vector3Method{
+    public static Vector3 toScreenCoordinate(this Vector3 x){
+        Vector3 pos=Camera.mainCamera.WorldToScreenPoint(x);
+        return new Vector3(pos.x, Screen.height - pos.y, pos.z) ;
+    }
+}
 
+public class ball : MonoBehaviour {
+    // 球的三維座標
     public Vector3 originPos;
     public AudioClip[] sound = new AudioClip[3];
     public bool letBallMoveWithMouse=false;
@@ -62,12 +70,26 @@ public class ball : MonoBehaviour {
         // 當滑鼠下壓球體並移動
         else if (mouseDown && letBallMoveWithMouse == true && denyAllowMouseControl==false) 
         {
-            // 計算滑鼠的平面位置
-            Vector3 pos = Camera.mainCamera.ScreenToWorldPoint(Input.mousePosition);
-            pos.z=GameObject.FindGameObjectWithTag("ball").transform.position.z;
+            /*
+                // 計算滑鼠的平面位置
+                Vector3 pos = Camera.mainCamera.ScreenToWorldPoint(Input.mousePosition);
+                pos.z=GameObject.FindGameObjectWithTag("ball").transform.position.z;
 
-            // 讓物體隨著向量位移
-            GameObject.FindGameObjectWithTag("ball").transform.position = pos;
+                // 讓物體隨著向量位移
+                GameObject.FindGameObjectWithTag("ball").transform.position = pos;
+            */
+
+            // 把物體擺回原點
+            GameObject.FindGameObjectWithTag("ball").transform.position = this.originPos;
+
+            // 用滑鼠座標重新計算向量, 並設定臨界值
+            Vector3 directionValue=Vector3.ClampMagnitude(Camera.mainCamera.ScreenToWorldPoint(Input.mousePosition) - this.originPos,5.5f);
+
+            // 將深度Z向量設定為 0;
+            directionValue.z = 0;
+
+            // 使用原點+向量計算出物件座標
+            this.gameObject.transform.position = this.originPos+directionValue;//new Vector3(this.originPos.x + directionValue.x, this.originPos.y + directionValue.y, this.originPos.z);
         }
         // 當放開滑鼠時
         else if(letBallMoveWithMouse==true)
@@ -94,9 +116,11 @@ public class ball : MonoBehaviour {
             denyAllowMouseControl = true;
         }
 
+        // 確定這是二維座標
+        // Debug.Log(Input.mousePosition);
         
         // 橡皮筋的恢復臨界值Flag開啟, 球體將橡皮筋拉超逾 4 時
-        if (ballDistanceFromHisOriginPosition >= 4 && this.transform.position.x >= this.originPos.x + 4 && rubberLineReturnOrigin==false)
+        if (ballDistanceFromHisOriginPosition >= 6 && this.transform.position.x >= this.originPos.x + 4 && rubberLineReturnOrigin==false)
         {
             rubberLineReturnOrigin = true;
             // 將恢復座標起算點帶入
